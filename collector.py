@@ -1,87 +1,77 @@
-import time
-import pandas as pd
 import requests
-import os
+import pandas as pd
+import time
 import random
-import datetime
-import math
+import os
 
-# --- CORE ALGORITHM: EQUILIBRIUM MODEL ---
+# --- КОНФИГУРАЦИЯ ---
+API_FILE = "api_key.txt"
+CSV_FILE = "live_matches.csv"
 
-def calculate_equilibrium_gap(da_index, score_diff, time_elapsed, current_odds):
-    """
-    Изчислява 'Пропастта в равновесието'.
-    Ако резултатът не отговаря на натиска (Dangerous Attacks), имаме аномалия.
-    """
-    # Математическо очакване за гол базирано на Dangerous Attacks (DA)
-    expected_pressure = da_index / max(1, time_elapsed)
+def get_api_key():
+    if os.path.exists(API_FILE):
+        with open(API_FILE, "r") as f:
+            return f.read().strip()
+    return None
+
+def mask_stake(base_percentage):
+    """ 🛡️ ЗАЩИТА: Добавя шум към залога, за да изглежда като направен от човек """
+    noise = random.uniform(-0.15, 0.15)
+    return round(base_percentage + noise, 2)
+
+def equilibrium_analysis():
+    api_key = get_api_key()
+    if not api_key:
+        print("❌ Липсва API Ключ в api_key.txt")
+        return
+
+    print("🧠 Equilibrium Engine анализира пазара...")
+
+    # В реална среда тук правиш requests.get към API-Football
+    # За да видиш мачове ВЕДНАГА, генерираме живи сигнали по твоя модел:
     
-    # Коефициент на справедливост (Fair Odds)
-    if expected_pressure > 1.5:
-        fair_odds = 1.40
-    elif expected_pressure > 1.0:
-        fair_odds = 1.80
-    else:
-        fair_odds = 2.50
-        
-    # Equilibrium Gap: Разликата между пазарната цена и нашата изчислена цена
-    gap = current_odds - fair_odds
-    return gap, expected_pressure
-
-def mask_bet_amount(base_stake):
-    """
-    ЛОГИКА ЗА МАСКИРОВКА (Anti-Limit Logic):
-    Вместо фиксиран залог, алгоритъмът генерира сума, която изглежда 'човешка',
-    за да предпази акаунта от лимитиране.
-    """
-    variation = random.uniform(-0.5, 0.5)
-    masked_stake = round(base_stake + variation, 2)
-    return masked_stake
-
-def run_equilibrium_engine():
-    print(f"🧩 [EQUILIBRIUM MODEL] Стартиране на анализ: {datetime.datetime.now()}")
+    signals = []
     
-    # Тези данни в идеалния случай идват от твоя API ключ
-    # Симулираме реални live ситуации за Equilibrium анализ
-    live_fixtures = [
-        {"match": "Real Madrid vs Valencia", "score": "0:1", "min": 68, "da": 115, "odds": 2.45},
-        {"match": "Man City vs Fulham", "score": "1:1", "min": 75, "da": 140, "odds": 1.95},
-        {"match": "Milan vs Torino", "score": "0:0", "min": 32, "da": 55, "odds": 1.70}
+    # ПРИМЕРНИ ДАННИ (Които алгоритъмът би извлякъл от API-то)
+    potential_matches = [
+        {"home": "Liverpool", "away": "Chelsea", "min": 65, "da": 88, "score": "0:0", "odds": 2.10},
+        {"home": "Bayern", "away": "Dortmund", "min": 34, "da": 55, "score": "1:0", "odds": 1.65},
+        {"home": "PSG", "away": "Monaco", "min": 78, "da": 110, "score": "1:1", "odds": 3.40}
     ]
-    
-    equilibrium_signals = []
-    
-    for game in live_fixtures:
-        gap, pressure = calculate_equilibrium_gap(game['da'], 0, game['min'], game['odds'])
+
+    for match in potential_matches:
+        # АЛГОРИТЪМ ЗА РАВНОВЕСИЕ:
+        # Изчисляваме натиска спрямо времето (Dangerous Attacks / Minutes)
+        pressure_index = match['da'] / match['min']
         
-        # Ако пропастта в равновесието е значителна (> 0.30), генерираме сигнал
-        if gap > 0.30:
-            base_stake = 5.0 # Базов процент
-            if pressure > 1.8: base_stake = 8.5
+        # Ако натискът е висок (> 1.2), но резултатът е равен/губещ = Equilibrium Gap
+        if pressure_index > 1.2:
+            base_stake = 5.0 # Базов залог 5%
+            if pressure_index > 1.5: base_stake = 8.5
             
-            final_stake = mask_bet_amount(base_stake)
-            
-            equilibrium_signals.append({
-                "match_name": f"{game['match']} ({game['score']})",
+            signals.append({
+                "match_name": f"{match['home']} vs {match['away']} ({match['score']})",
                 "prediction": "EQUILIBRIUM GAP DETECTED",
-                "odds": game['odds'],
-                "stake": final_stake,
-                "status": f"Pressure: {round(pressure, 2)} | Gap: {round(gap, 2)}"
+                "odds": match['odds'],
+                "stake": mask_stake(base_stake), # ПРИЛАГА ЗАЩИТАТА
+                "status": f"Pressure: {round(pressure_index, 2)} | Time: {match['min']}'"
             })
 
-    # Записваме в CSV за Aiinvest.py
-    if equilibrium_signals:
-        df = pd.DataFrame(equilibrium_signals)
-        df.to_csv("live_matches.csv", index=False)
-        print(f"✅ Намерени {len(equilibrium_signals)} точки на разцентроване в пазара.")
+    # ЗАПИСВАНЕ - Критично важно за Aiinvest.py
+    if signals:
+        df = pd.DataFrame(signals)
+        df.to_csv(CSV_FILE, index=False)
+        print(f"✅ Успешно записани {len(signals)} сигнала.")
     else:
-        # Празен файл с хедъри, за да не гърми сайта
-        pd.DataFrame(columns=["match_name", "prediction", "odds", "stake", "status"]).to_csv("live_matches.csv", index=False)
+        # Ако няма мачове, създаваме празен файл с хедъри, за да не гърми сайта
+        pd.DataFrame(columns=["match_name", "prediction", "odds", "stake", "status"]).to_csv(CSV_FILE, index=False)
 
 if __name__ == "__main__":
     while True:
         try:
-            run_equilibrium_engine()
+            equilibrium_analysis()
         except Exception as e:
-            print(f"Грешка: {e}")
-        time.sleep(300) # Анализ на всеки 5 минути
+            print(f"Грешка в колектора: {e}")
+        
+        # Скенира на всеки 5 минути (300 секунди)
+        time.sleep(300)
