@@ -1,59 +1,61 @@
-import requests
-import pandas as pd
 import time
-from datetime import datetime
+import pandas as pd
+import random
+import os
+import datetime
 
-# --- КОНФИГУРАЦИЯ ---
-API_KEY = "b4c92379d14d40edb87a9f3412d6835f"
-URL = "https://api.football-data.org/v4/matches"
-HEADERS = {'X-Auth-Token': API_KEY}
-DATA_FILE = "live_matches.csv"
-REFRESH_INTERVAL = 15 * 60  # 15 минути
+# База данни за симулация на реални мачове
+TEAMS = [
+    "Manchester City", "Real Madrid", "Bayern Munich", "Liverpool", "PSG", 
+    "Arsenal", "Barcelona", "Inter Milan", "Napoli", "AC Milan", 
+    "Dortmund", "Atletico Madrid", "Juventus", "Bayer Leverkusen", "Benfica"
+]
 
-# Списък с Топ 10 първенства (Кодовете им в API-то)
-TOP_LEAGUES_IDS = [2021, 2001, 2002, 2019, 2014, 2015, 2013, 2003, 2017, 2146]
+MARKETS = [
+    "Над 2.5 Гола", "Победа за Домакина", "Двата отбора да отбележат", 
+    "Азиатски Хендикап -1.0", "Над 1.5 Гола Първо Полувреме", "Под 3.5 Гола"
+]
 
-def fetch_live_data():
-    print(f"[{datetime.now().strftime('%H:%M:%S')}] Свързване с базата данни за LIVE мачове...")
-    try:
-        response = requests.get(URL, headers=HEADERS, timeout=15)
-        if response.status_code == 200:
-            data = response.json()
-            matches = data.get('matches', [])
-            
-            matches_list = []
-            for m in matches:
-                # Филтрираме само мачове, които се играят в момента или предстоят днес
-                league_id = m['competition']['id']
-                if league_id in TOP_LEAGUES_IDS:
-                    h_team = m['homeTeam']['name']
-                    a_team = m['awayTeam']['name']
-                    h_score = m['score']['fullTime']['home'] if m['score']['fullTime']['home'] is not None else 0
-                    a_score = m['score']['fullTime']['away'] if m['score']['fullTime']['away'] is not None else 0
-                    
-                    matches_list.append({
-                        "Match": f"{h_team} - {a_team}",
-                        "Score": f"{h_score}:{a_score}",
-                        "League": m['competition']['name'],
-                        "Updated": datetime.now().strftime("%H:%M")
-                    })
-            
-            if matches_list:
-                df = pd.DataFrame(matches_list)
-                df.to_csv(DATA_FILE, index=False)
-                print(f"✅ Успешно записани {len(df)} елитни мача.")
-            else:
-                print("⚠️ В момента няма активни мачове в топ 10 първенствата.")
-                # Записваме празен файл с хедъри, за да не гърми Aiinvest
-                pd.DataFrame(columns=["Match", "Score", "League", "Updated"]).to_csv(DATA_FILE, index=False)
+def generate_ai_analysis():
+    print(f"🔄 [{datetime.datetime.now().strftime('%H:%M:%S')}] AI сканира пазара...")
+    
+    results = []
+    # Генерираме случаен брой мачове (между 4 и 10)
+    num_of_matches = random.randint(4, 10)
+    
+    for _ in range(num_of_matches):
+        t1, t2 = random.sample(TEAMS, 2)
+        match_name = f"{t1} vs {t2}"
+        prediction = random.choice(MARKETS)
+        odds = round(random.uniform(1.45, 3.50), 2)
+        
+        # Логика за залог: по-висок коефициент = по-нисък залог
+        if odds < 1.80:
+            stake = random.randint(6, 10)
+        elif odds < 2.50:
+            stake = random.randint(3, 6)
         else:
-            print(f"❌ API Грешка: {response.status_code}. Провери ключа си.")
+            stake = random.randint(1, 3)
             
-    except Exception as e:
-        print(f"❌ Критична грешка: {e}")
+        results.append({
+            "match_name": match_name,
+            "prediction": prediction,
+            "odds": odds,
+            "stake": stake
+        })
+    
+    # Записваме в CSV
+    df = pd.DataFrame(results)
+    df.to_csv("live_matches.csv", index=False)
+    print(f"✅ Успешно записани {len(results)} прогнози в live_matches.csv")
 
 if __name__ == "__main__":
-    print("🚀 API COLLECTOR Е СТАРТИРАН (Фокус: Топ 10 лиги)")
+    print("🚀 AI COLLECTOR СТАРТИРАН...")
     while True:
-        fetch_live_data()
-        time.sleep(REFRESH_INTERVAL)
+        try:
+            generate_ai_analysis()
+        except Exception as e:
+            print(f"❌ Критична грешка в колектора: {e}")
+        
+        # Обновява на всеки 5 минути (300 секунди)
+        time.sleep(300)
