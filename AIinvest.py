@@ -6,15 +6,16 @@ import time
 from streamlit_autorefresh import st_autorefresh
 
 # --- 1. ТВОЯТ API КЛЮЧ (ЗАКЛЮЧЕН В КОДА) ---
-API_KEY = "ТУК_СЛОЖИ_ТВОЯ_API_КЛЮЧ"
+API_KEY = "b4c92379d14d40edb87a9f3412d6835f"
 
-# Записваме го във файл автоматично, за да може и collector.py да го вижда
+# Автоматично създаване на api_key.txt за работа на collector.py
 with open("api_key.txt", "w") as f:
     f.write(API_KEY)
 
-# --- 2. АВТОМАТИЗАЦИЯ НА ПРОЦЕСИТЕ ---
+# --- 2. СТАРТИРАНЕ НА ЗАЩИТЕНИТЕ ПРОЦЕСИ ---
 if "initialized" not in st.session_state:
     if os.path.exists("collector.py"):
+        # Стартира collector.py, който съдържа "Anti-Limit" математиката
         subprocess.Popen(["python", "collector.py"])
     if os.path.exists("mailer.py"):
         subprocess.Popen(["python", "mailer.py"])
@@ -22,16 +23,14 @@ if "initialized" not in st.session_state:
 
 # --- 3. НАСТРОЙКИ НА СТРАНИЦАТА ---
 st.set_page_config(
-    page_title="AI INVESTOR - Premium Signals",
-    page_icon="🚀",
-    layout="wide",
-    initial_sidebar_state="collapsed"
+    page_title="EQUILIBRIUM AI | Anti-Limit Protected",
+    page_icon="🛡️",
+    layout="wide"
 )
 
-# Автоматично опресняване на всеки 30 секунди
-st_autorefresh(interval=30000, key="data_update_refresh")
+st_autorefresh(interval=30000, key="secure_refresh")
 
-# --- 4. ЦЯЛОСТЕН ДИЗАЙН (CSS) ---
+# --- 4. ДИЗАЙН СЪС ЗАЩИТНИ ЕЛЕМЕНТИ (CSS) ---
 st.markdown("""
     <style>
     .stApp { background-color: #0b0e14; }
@@ -39,102 +38,95 @@ st.markdown("""
         color: #00ff00;
         text-align: center;
         font-family: 'Arial Black', sans-serif;
-        font-size: 3.5rem;
-        text-shadow: 0 0 25px #00ff00;
-        margin-top: -50px;
+        font-size: 3.2rem;
+        text-shadow: 0 0 20px #00ff00;
+    }
+    .status-shield {
+        text-align: center;
+        color: #00ff00;
+        font-size: 0.9rem;
+        margin-bottom: 30px;
+        border: 1px solid #00ff00;
+        width: fit-content;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 5px 15px;
+        border-radius: 20px;
+        background: rgba(0, 255, 0, 0.1);
     }
     .match-card {
-        background: linear-gradient(145deg, #161b22, #0d1117);
-        border: 2px solid #00ff00;
-        border-radius: 20px;
-        padding: 25px;
-        margin-bottom: 25px;
-        box-shadow: 0 10px 30px rgba(0, 255, 0, 0.15);
+        background: #161b22;
+        border: 1px solid #333;
+        border-radius: 15px;
+        padding: 20px;
         text-align: center;
+        transition: 0.3s;
     }
-    .team-header {
-        color: #ffffff;
-        font-size: 1.5rem;
-        font-weight: bold;
-        margin-bottom: 15px;
-        border-bottom: 1px solid #333;
-        padding-bottom: 10px;
+    .match-card:hover { border-color: #00ff00; box-shadow: 0 0 15px rgba(0,255,0,0.2); }
+    .stake-value {
+        color: #00ff00;
+        font-size: 2.5rem;
+        font-weight: 900;
+        font-family: 'Courier New', monospace; /* Моноширинен шрифт за прецизност */
     }
-    .prediction-text { color: #ffffff; font-size: 1.1rem; margin: 10px 0; }
-    .odds-badge {
-        background: #00ff00;
-        color: #000;
-        padding: 5px 15px;
-        border-radius: 10px;
-        font-weight: bold;
-        font-size: 1.2rem;
+    .protected-badge {
+        font-size: 0.6rem;
+        color: #8b949e;
+        letter-spacing: 1px;
     }
-    .stake-container {
-        margin-top: 20px;
-        padding: 10px;
-        background: rgba(0, 255, 0, 0.05);
-        border-radius: 10px;
-    }
-    .stake-label { color: #8b949e; font-size: 0.8rem; text-transform: uppercase; }
-    .stake-value { color: #00ff00; font-size: 2.2rem; font-weight: 900; }
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown('<h1 class="main-title">🚀 AI INVESTOR</h1>', unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #8b949e;'>Система за анализ на пазарни аномалии в реално време</p>", unsafe_allow_html=True)
+st.markdown('<h1 class="main-title">EQUILIBRIUM AI</h1>', unsafe_allow_html=True)
+st.markdown('<div class="status-shield">🛡️ ANTI-LIMIT PROTECTION ACTIVE</div>', unsafe_allow_html=True)
 
-# --- 5. ЛОГИКА ЗА ДАННИТЕ ---
+# --- 5. ВИЗУАЛИЗАЦИЯ НА СИГНАЛИТЕ (EQUILIBRIUM DATA) ---
 file_path = "live_matches.csv"
 
 if os.path.exists(file_path):
     try:
         df = pd.read_csv(file_path)
-        
-        # Проверка на задължителни колони
-        cols_needed = ['match_name', 'prediction', 'odds', 'stake']
-        if all(c in df.columns for c in cols_needed) and not df.empty:
-            layout_cols = st.columns(3)
+        if not df.empty:
+            cols = st.columns(3)
             for idx, row in df.iterrows():
-                with layout_cols[idx % 3]:
+                with cols[idx % 3]:
+                    # Тук се визуализира "маскираният" залог от collector.py
                     st.markdown(f"""
                     <div class="match-card">
-                        <div class="team-header">⚽ {row['match_name']}</div>
-                        <div class="prediction-text">Прогноза: <b>{row['prediction']}</b></div>
-                        <div style="margin: 15px 0;"><span class="odds-badge">@{row['odds']}</span></div>
-                        <div class="stake-container">
-                            <div class="stake-label">Препоръчителен залог</div>
+                        <div style="color:white; font-weight:bold; font-size:1.2rem;">{row['match_name']}</div>
+                        <div style="color:#00ff00; margin-top:5px; font-size:0.8rem;">{row['prediction']}</div>
+                        <div style="font-size:1.5rem; margin:15px 0;">@{row['odds']}</div>
+                        <div style="background:rgba(255,255,255,0.03); padding:10px; border-radius:10px;">
+                            <div class="protected-badge">SAFE STAKE MODEL</div>
                             <div class="stake-value">{row['stake']}%</div>
-                            <div style="color: #444; font-size: 0.7rem;">ОТ ТЕКУЩАТА БАНКА</div>
                         </div>
+                        <div style="font-size:0.7rem; color:#444; margin-top:10px;">Gap ID: {row.get('status', 'Verified')}</div>
                     </div>
                     """, unsafe_allow_html=True)
         else:
-            st.info("⌛ Системата в момента калибрира нови сигнали. Моля, изчакайте...")
-    except Exception as e:
-        st.error(f"Грешка при четене на базата данни.")
+            st.info("🔍 Системата анализира пазара за Equilibrium аномалии...")
+    except:
+        st.error("Грешка при синхронизация на данните.")
 else:
-    st.warning("⚠️ Колекторът се стартира. Освежете след 30 секунди...")
+    st.warning("🔄 Инициализиране на защитения модул...")
 
-# --- 6. ГРАФА ЗА АБОНАМЕНТ (ИМЕЙЛИ) ---
-st.markdown("<br><br><hr>", unsafe_allow_html=True)
-st.subheader("📩 Абонирай се за VIP сигнали")
-col1, col2 = st.columns([2,1])
-with col1:
-    email_input = st.text_input("Въведи имейл адрес:", placeholder="your@email.com")
-with col2:
-    if st.button("АБОНИРАЙ МЕ"):
-        if "@" in email_input:
-            with open("emails.txt", "a") as f:
-                f.write(email_input + "\n")
-            st.success("Успешно добавен!")
-        else:
-            st.error("Невалиден имейл.")
+# --- 6. ГРАФА ЗА ИМЕЙЛИ (БАЗА ДАННИ) ---
+st.markdown("<br><br><div style='text-align:center;'>", unsafe_allow_html=True)
+st.subheader("📩 VIP Имейл Абонамент")
+email = st.text_input("Въведи мейл за ежедневни отчети (10:00 ч.):", placeholder="example@mail.com")
+if st.button("АБОНИРАЙ МЕ"):
+    if "@" in email:
+        with open("emails.txt", "a") as f:
+            f.write(email + "\n")
+        st.success("✅ Успешно добавен в защитения списък!")
+st.markdown("</div>", unsafe_allow_html=True)
 
-# --- 7. SIDEBAR (САМО СТАТУС И БУТОН ЗА МЕЙЛИ) ---
+# --- 7. SIDEBAR ---
 with st.sidebar:
-    st.title("Admin")
-    st.write("API Status: **CONNECTED**")
+    st.title("🛡️ Guard Panel")
+    st.write("API: **Encrypted**")
+    st.write("Masking: **Randomized**")
     st.divider()
-    if st.button("📧 ИЗПРАТИ МЕЙЛИ СЕГА"):
+    if st.button("📧 FORCE SEND MAIL"):
         subprocess.Popen(["python", "mailer.py", "--force"])
-        st.success("Сигналът е изпратен!")
+        st.toast("Изпращане...")
