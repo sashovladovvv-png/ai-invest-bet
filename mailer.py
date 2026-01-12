@@ -1,41 +1,65 @@
+import time
+import datetime
 import smtplib
-from email.mime.text import MIMEText
 import os
+import sys
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
-def send_daily_prognosis():
-    # 1. Проверяваме дали имаме записани потребители
-    if not os.path.exists("subscribers.txt"):
-        print("Няма записани имейли.")
-        return
+# --- КОНФИГУРАЦИЯ (ПОПЪЛНИ ТУК) ---
+GMAIL_USER = "твоят_мейл@gmail.com"
+GMAIL_APP_PASS = "твоята_app_парола" # Трябва да е App Password от Google
+CLIENT_LIST = ["client1@email.com", "client2@email.com"]
 
-    with open("subscribers.txt", "r") as f:
-        emails = [line.strip() for line in f.readlines() if "@" in line]
+def send_bulk_emails():
+    print("📧 Подготовка на имейлите...")
+    
+    msg = MIMEMultipart()
+    msg['From'] = GMAIL_USER
+    msg['To'] = ", ".join(CLIENT_LIST)
+    msg['Subject'] = f"🎯 AI INVESTOR: Вашите Прогнози за {datetime.date.today().strftime('%d.%m.%Y')}"
 
-    if not emails:
-        print("Списъкът с имейли е празен.")
-        return
-
-    # 2. Генериране на съдържанието (Elite Double)
-    # Тук можеш да вкараш логика, която взима мачовете от API-то
-    subject = "🚨 Твоят Elite Double за днес е тук!"
-    body = "Здравей!\n\nЕто днешните топ 2 прогнози от Equilibrium AI:\n1. Реал Мадрид - Барселона: Над 2.5 гола\n2. Ливърпул - Арсенал: Г/Г\n\nУспех!"
-
-    # 3. Настройки на Gmail (Използвай App Password)
-    sender = "your-email@gmail.com"
-    password = "your-app-password"
+    # HTML Дизайн на имейла
+    html = f"""
+    <div style="background-color: #0b0e14; color: #ffffff; padding: 30px; border: 2px solid #00ff00; border-radius: 15px; font-family: sans-serif;">
+        <h1 style="color: #00ff00; text-align: center;">AI INVESTOR SIGNALS</h1>
+        <p style="font-size: 1.1em;">Здравейте, вашите анализи за днешния ден са готови!</p>
+        <p>Нашият алгоритъм откри нови възможности с висока стойност.</p>
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="ТВОЯТ_STREAMLIT_URL" style="background-color: #00ff00; color: #000; padding: 15px 25px; text-decoration: none; font-weight: bold; border-radius: 5px;">ВИЖ ПРОГНОЗИТЕ В САЙТА</a>
+        </div>
+        <p style="color: #555; font-size: 0.8em;">Ако не сте се абонирали за този бюлетин, моля игнорирайте съобщението.</p>
+    </div>
+    """
+    
+    msg.attach(MIMEText(html, 'html'))
 
     try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(sender, password)
-            for recipient in emails:
-                msg = MIMEText(body)
-                msg['Subject'] = subject
-                msg['From'] = sender
-                msg['To'] = recipient
-                server.sendmail(sender, recipient, msg.as_string())
-        print(f"✅ Успешно изпратено до {len(emails)} души.")
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(GMAIL_USER, GMAIL_APP_PASS)
+        server.sendmail(GMAIL_USER, CLIENT_LIST, msg.as_string())
+        server.quit()
+        print(f"✅ Успешно изпратени имейли до {len(CLIENT_LIST)} клиенти!")
     except Exception as e:
-        print(f"❌ Грешка при изпращане: {e}")
+        print(f"❌ Грешка при изпращане на имейли: {e}")
+
+def run_scheduler():
+    # Проверка за ръчно стартиране
+    if len(sys.argv) > 1 and sys.argv[1] == "--force":
+        send_bulk_emails()
+        return
+
+    print("⏰ Мейлърът чака 10:00 часа (UTC 08:00)...")
+    while True:
+        now = datetime.datetime.now()
+        
+        # Настройка: 10:00 българско време е 08:00 UTC (Сървъра)
+        if now.hour == 8 and now.minute == 0:
+            send_bulk_emails()
+            time.sleep(70) # Спираме за минута
+            
+        time.sleep(30) # Проверка на всеки 30 секунди
 
 if __name__ == "__main__":
-    send_daily_prognosis()
+    run_scheduler()
