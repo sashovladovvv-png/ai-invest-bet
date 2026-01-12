@@ -8,7 +8,7 @@ from streamlit_autorefresh import st_autorefresh
 
 # --- 1. ПРЕДВАРИТЕЛНА КОНФИГУРАЦИЯ И СИГУРНОСТ ---
 # ТВОЯТ API КЛЮЧ Е ВГРАДЕН ТУК (Не се пипа от потребителя)
-API_KEY_DATABASE = "ТУК_ПОСТАВИ_ТВОЯ_API_КЛЮЧ"
+API_KEY_DATABASE = "b4c92379d14d40edb87a9f3412d6835f"
 
 # Автоматично генериране на системния файл за ключа
 with open("api_key.txt", "w") as f:
@@ -254,3 +254,4 @@ with st.sidebar:
 
     st.divider()
     st.markdown("<p style='color: #444; font-size: 0.7rem;'>EQUILIBRIUM ENGINE v2.4.0<br>Authorized Access Only</p>", unsafe_allow_html=True)
+
