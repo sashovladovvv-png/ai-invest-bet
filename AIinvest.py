@@ -8,8 +8,8 @@ import datetime
 from streamlit_autorefresh import st_autorefresh
 
 # --- 1. ТВОИТЕ ВГРАДЕНИ API КЛЮЧОВЕ (ЦЕНТРАЛНО УПРАВЛЕНИЕ) ---
-API_SOURCE_1 = "ТУК_ПОСТАВИ_API_FOOTBALL_KEY" # RapidAPI / API-Football
-API_SOURCE_2 = "ТУК_ПОСТАВИ_BETS_API_KEY"      # BetsAPI / B365API
+API_SOURCE_1 = "b4c92379d14d40edb87a9f3412d6835f" # RapidAPI / API-Football
+API_SOURCE_2 = "b5b07a3f-b019-4a18-8969-6045169feda9"      # BetsAPI / B365API
 
 # Автоматично генериране на системните файлове за колектора
 with open("api_key.txt", "w") as f:
@@ -224,3 +224,4 @@ with st.sidebar:
         st.toast("Сигналите се изпращат...")
 
 st.markdown("<br><hr><p style='text-align: center; color: #444; font-size: 0.8rem;'>EQUILIBRIUM ENGINE v3.0 | 2026 PRO EDITION</p>", unsafe_allow_html=True)
+
