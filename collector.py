@@ -5,73 +5,89 @@ import random
 import os
 
 # --- КОНФИГУРАЦИЯ ---
-API_FILE = "api_key.txt"
 CSV_FILE = "live_matches.csv"
 
 def get_api_key():
-    if os.path.exists(API_FILE):
-        with open(API_FILE, "r") as f:
+    # Взима ключа, който си заложил в Aiinvest.py
+    if os.path.exists("api_key.txt"):
+        with open("api_key.txt", "r") as f:
             return f.read().strip()
     return None
 
 def mask_stake(base_percentage):
-    """ 🛡️ ЗАЩИТА: Добавя шум към залога, за да изглежда като направен от човек """
-    noise = random.uniform(-0.15, 0.15)
-    return round(base_percentage + noise, 2)
+    """ 🛡️ ЗАЩИТА ОТ БОТОВЕ: Прави залога да изглежда човешки (напр. 5.14%) """
+    return round(base_percentage + random.uniform(-0.18, 0.18), 2)
 
-def equilibrium_analysis():
+def fetch_real_live_matches():
     api_key = get_api_key()
     if not api_key:
-        print("❌ Липсва API Ключ в api_key.txt")
+        print("❌ Липсва API Ключ!")
         return
 
-    print("🧠 Equilibrium Engine анализира пазара...")
-
-    # В реална среда тук правиш requests.get към API-Football
-    # За да видиш мачове ВЕДНАГА, генерираме живи сигнали по твоя модел:
+    url = "https://api-football-v1.p.rapidapi.com/v3/fixtures"
+    querystring = {"live": "all"} # Взима всички мачове, които се играят СЕГА
     
-    signals = []
-    
-    # ПРИМЕРНИ ДАННИ (Които алгоритъмът би извлякъл от API-то)
-    potential_matches = [
-        {"home": "Liverpool", "away": "Chelsea", "min": 65, "da": 88, "score": "0:0", "odds": 2.10},
-        {"home": "Bayern", "away": "Dortmund", "min": 34, "da": 55, "score": "1:0", "odds": 1.65},
-        {"home": "PSG", "away": "Monaco", "min": 78, "da": 110, "score": "1:1", "odds": 3.40}
-    ]
+    headers = {
+        "X-RapidAPI-Key": api_key,
+        "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com"
+    }
 
-    for match in potential_matches:
-        # АЛГОРИТЪМ ЗА РАВНОВЕСИЕ:
-        # Изчисляваме натиска спрямо времето (Dangerous Attacks / Minutes)
-        pressure_index = match['da'] / match['min']
+    try:
+        response = requests.get(url, headers=headers, params=querystring)
+        data = response.json()
         
-        # Ако натискът е висок (> 1.2), но резултатът е равен/губещ = Equilibrium Gap
-        if pressure_index > 1.2:
-            base_stake = 5.0 # Базов залог 5%
-            if pressure_index > 1.5: base_stake = 8.5
-            
-            signals.append({
-                "match_name": f"{match['home']} vs {match['away']} ({match['score']})",
-                "prediction": "EQUILIBRIUM GAP DETECTED",
-                "odds": match['odds'],
-                "stake": mask_stake(base_stake), # ПРИЛАГА ЗАЩИТАТА
-                "status": f"Pressure: {round(pressure_index, 2)} | Time: {match['min']}'"
-            })
+        fixtures = data.get('response', [])
+        signals = []
 
-    # ЗАПИСВАНЕ - Критично важно за Aiinvest.py
-    if signals:
-        df = pd.DataFrame(signals)
-        df.to_csv(CSV_FILE, index=False)
-        print(f"✅ Успешно записани {len(signals)} сигнала.")
-    else:
-        # Ако няма мачове, създаваме празен файл с хедъри, за да не гърми сайта
-        pd.DataFrame(columns=["match_name", "prediction", "odds", "stake", "status"]).to_csv(CSV_FILE, index=False)
+        print(f"📡 Скениране на {len(fixtures)} мача на живо...")
+
+        for item in fixtures:
+            fixture = item['fixture']
+            teams = item['teams']
+            goals = item['goals']
+            # Взимаме статистиката (Опасни атаки)
+            # Забележка: Някои мачове в безплатния план на API-то може да нямат пълна статистика
+            stats = item.get('statistics', [])
+            
+            # Намираме опасните атаки за домакина (Home Team)
+            da_home = 0
+            if stats:
+                for s in stats[0]['statistics']:
+                    if s['type'] == 'Dangerous Attacks':
+                        da_home = int(s['value']) if s['value'] else 0
+
+            minute = fixture['status']['elapsed']
+            score = f"{goals['home']}:{goals['away']}"
+            
+            # --- EQUILIBRIUM АЛГОРИТЪМ ---
+            # Търсим мач след 25-та минута, където домакинът натиска (DA > Minute)
+            if minute > 25 and da_home > minute:
+                pressure_index = da_home / minute
+                
+                # Ако имаме "Gap" (Натискът е голям, но резултатът е равен или губят)
+                if pressure_index > 1.1 and goals['home'] <= goals['away']:
+                    
+                    signals.append({
+                        "match_name": f"{teams['home']['name']} vs {teams['away']['name']} ({score})",
+                        "prediction": "EQUILIBRIUM GAP: NEXT GOAL HOME",
+                        "odds": round(random.uniform(1.80, 2.60), 2), # В реална версия се взима от API-то
+                        "stake": mask_stake(5.5),
+                        "status": f"Pressure Index: {round(pressure_index, 2)} | DA: {da_home}"
+                    })
+
+        # Записваме истинските мачове в CSV-то за сайта
+        if signals:
+            pd.DataFrame(signals).to_csv(CSV_FILE, index=False)
+            print(f"✅ Намерени {len(signals)} реални аномалии.")
+        else:
+            # Ако в момента няма аномалии по твоя модел, пишем "Scanning"
+            pd.DataFrame([{"match_name": "Scanning...", "prediction": "Market in Equilibrium", "odds": "-", "stake": 0}]).to_csv(CSV_FILE, index=False)
+
+    except Exception as e:
+        print(f"❌ Грешка при връзка с API: {e}")
 
 if __name__ == "__main__":
     while True:
-        try:
-            equilibrium_analysis()
-        except Exception as e:
-            print(f"Грешка в колектора: {e}")
-        
-        # Скенира на всеки 5 минути (300 секунди)
-        time.sleep(300)
+        fetch_real_live_matches()
+        # Изчакваме 2 минути преди следващото скениране, за да пестим API лимита
+        time.sleep(120)
