@@ -14,3 +14,9 @@ beautifulsoup4
 requests
 understat
 soccerdata
+streamlit
+pandas
+soccerdata
+pytz
+streamlit-autorefresh
+requests
