@@ -1,141 +1,142 @@
 import streamlit as st
-import json
-import os
+import pandas as pd
+import soccerdata as sd
+import math
 import datetime
 import pytz
-import math
+import json
+import os
+from streamlit_autorefresh import st_autorefresh
 
 # --- 1. КОНФИГУРАЦИЯ ---
-st.set_page_config(page_title="EQUILIBRIUM AI | AUTO-SORT", page_icon="🗂️", layout="wide")
+st.set_page_config(page_title="EQUILIBRIUM AI | GLOBAL ANALYZER", page_icon="🌍", layout="wide")
+st_autorefresh(interval=600000, key="global_refresh")
 
 bg_timezone = pytz.timezone('Europe/Sofia')
 now_bg = datetime.datetime.now(bg_timezone)
 
-DATA_FILE = "matches_db.json"
-ADMIN_PASSWORD = "Nikol2121@"
+# --- 2. ИИ МОЗЪК (ПОАСОН АЛГОРИТЪМ) ---
+def calculate_advanced_poisson(home_goals_avg, away_goals_avg):
+    """Изчислява вероятност за Над 2.5 на база историческа резултатност"""
+    lmbda = home_goals_avg + away_goals_avg
+    # Формула за вероятност 0, 1 и 2 гола (Под 2.5)
+    p0 = math.exp(-lmbda)
+    p1 = math.exp(-lmbda) * lmbda
+    p2 = (math.exp(-lmbda) * (lmbda**2)) / 2
+    
+    prob_under = (p0 + p1 + p2) * 100
+    if prob_under < 50:
+        return "НАД 2.5", round(100 - prob_under, 1)
+    else:
+        return "ПОД 2.5", round(prob_under, 1)
 
-# Инициализация на базата данни
-if not os.path.exists(DATA_FILE):
-    with open(DATA_FILE, "w", encoding='utf-8') as f:
-        json.dump([], f)
-
-def load_data():
+# --- 3. ФУНКЦИЯ ЗА СВЪРЗВАНЕ СЪС СВЕТОВНИТЕ ЛИГИ ---
+@st.cache_data(ttl=3600)
+def fetch_global_leagues_data():
+    """Сваля информация за всички налични лиги през soccerdata"""
+    all_leagues_data = {}
     try:
-        with open(DATA_FILE, "r", encoding='utf-8') as f:
-            return json.load(f)
-    except: return []
+        # Използваме FiveThirtyEight за бърз достъп до глобални прогнози и статистики
+        # Поддържа Англия, Германия, Испания, Италия, Франция, Холандия, САЩ, Бразилия и др.
+        fte = sd.FiveThirtyEight(leagues="all", seasons=2025)
+        upcoming = fte.read_upcoming()
+        return upcoming
+    except Exception as e:
+        return None
 
-def save_data(data):
-    with open(DATA_FILE, "w", encoding='utf-8') as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
-
-# --- 2. АЛГОРИТЪМ ПОАСОН ---
-def get_analysis(odds):
-    try:
-        o = float(odds)
-        # Математически модел за очаквани голове
-        lmbda = 3.25 / o
-        p_under = (math.exp(-lmbda) * (1 + lmbda + (lmbda**2)/2)) * 100
-        if p_under < 48:
-            return "НАД 2.5", round(100 - p_under, 1)
-        return "ПОД 2.5", round(p_under, 1)
-    except: return "АНАЛИЗ", 50.0
-
-# --- 3. ДИЗАЙН ---
+# --- 4. СТИЛИЗАЦИЯ ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Rajdhani:wght@500;700&display=swap');
     .stApp { background-color: #05080a; color: #e0e0e0; font-family: 'Rajdhani', sans-serif; }
-    .main-header { font-family: 'Orbitron', sans-serif; color: #00ff00; text-align: center; font-size: 2.8rem; text-shadow: 0 0 15px #00ff00; margin-bottom: 20px; }
-    .match-card { background: #0d1117; border: 1px solid #1f242c; border-radius: 10px; padding: 20px; margin-bottom: 12px; border-left: 5px solid #00ff00; transition: 0.3s; }
-    .match-card:hover { border-left: 5px solid #ffffff; background: #161b22; }
-    .prob-badge { background: rgba(0, 255, 0, 0.1); color: #00ff00; padding: 5px 10px; border-radius: 5px; font-weight: bold; border: 1px solid #00ff00; }
-    .table-style { width: 100%; border-collapse: collapse; margin-top: 30px; }
-    .table-style th { background: #1f242c; color: #00ff00; padding: 12px; text-align: left; }
-    .table-style td { padding: 12px; border-bottom: 1px solid #1f242c; }
+    .main-header { font-family: 'Orbitron', sans-serif; color: #00ff00; text-align: center; font-size: 2.5rem; text-shadow: 0 0 10px #00ff00; }
+    .match-card { background: #0d1117; border: 1px solid #1f242c; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 4px solid #00ff00; transition: 0.3s; }
+    .match-card:hover { transform: scale(1.01); background: #161b22; }
+    .league-label { background: #1f242c; color: #00ff00; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; text-transform: uppercase; }
+    .prob-display { font-family: 'Orbitron'; color: #00ff00; font-size: 1.3rem; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. АДМИН ПАНЕЛ (АВТОМАТИЗАЦИЯ) ---
+# --- 5. АДМИН ПАНЕЛ (ОБРАБОТКА НА ФАЙЛА) ---
+st.markdown('<h1 class="main-header">EQUILIBRIUM AI | GLOBAL ENGINE</h1>', unsafe_allow_html=True)
+
 with st.sidebar:
-    st.title("⚙️ СИСТЕМЕН КОНТРОЛ")
-    pwd = st.text_input("Парола за Nikol:", type="password")
-    
-    if pwd == ADMIN_PASSWORD:
-        st.success("Системата е готова за зареждане")
-        st.write("---")
+    st.title("👤 АДМИН ПАНЕЛ")
+    uploaded_file = st.file_uploader("Качи твоята АРМАДА (.txt)", type="txt")
+    process_btn = st.button("🚀 АНАЛИЗИРАЙ СВЕТОВНИТЕ ЛИГИ")
+
+# --- 6. ОСНОВНА ЛОГИКА И ПОДРЕЖДАНЕ ---
+if uploaded_file or process_btn:
+    with st.spinner("ИИ сканира световните лиги и анализира твоя файл..."):
+        # 1. Извличане на глобалните данни
+        global_stats = fetch_global_leagues_data()
         
-        st.subheader("📦 МАСОВО ЗАРЕЖДАНЕ")
-        # Позволява качване на целия файл с армадата мачове
-        uploaded_file = st.file_uploader("Избери файл със статистика (.txt)", type="txt")
+        final_list = []
         
+        # 2. Ако има качен файл, го анализираме
         if uploaded_file:
             content = uploaded_file.getvalue().decode("utf-8")
-            lines = [line for line in content.splitlines() if line.strip()]
-            
-            new_data = []
-            for line in lines:
-                # Формат: Отбор1, Отбор2, Резултат, Коефициент, Час
-                parts = line.split(",")
-                if len(parts) >= 5:
-                    h, a, sc, od, tm = [p.strip() for p in parts[:5]]
-                    pred, prob = get_analysis(od)
-                    new_data.append({
-                        "match": f"{h} - {a}",
-                        "score": sc,
-                        "odds": od,
-                        "pred": pred,
-                        "prob": prob,
-                        "time": tm,
-                        "date": now_bg.strftime("%d.%m")
+            for line in content.splitlines():
+                if "," in line:
+                    parts = line.split(",")
+                    # Очакваме формат: Отбор1, Отбор2, Коефициент
+                    h, a, odds = parts[0].strip(), parts[1].strip(), float(parts[2].strip())
+                    pred, prob = calculate_advanced_poisson(1.6, 1.4) # Базово изчисление
+                    final_list.append({
+                        "league": "МОЯТ СПИСЪК", "match": f"{h} - {a}",
+                        "pred": pred, "prob": prob, "time": "ДНЕС"
                     })
-            
-            # АВТОМАТИЧНО ПОДРЕЖДАНЕ: Сортираме по вероятност (най-сигурните най-отгоре)
-            new_data = sorted(new_data, key=lambda x: x['prob'], reverse=True)
-            
-            if st.button("🚀 АНАЛИЗИРАЙ И ПОДРЕДИ"):
-                save_data(new_data)
-                st.balloons()
-                st.rerun()
 
-        if st.button("🗑️ ИЗЧИСТИ БАЗАТА"):
-            save_data([])
-            st.rerun()
+        # 3. Добавяме автоматично изтеглените мачове от света
+        if global_stats is not None:
+            for index, row in global_stats.head(20).iterrows():
+                # Изчисляваме прогноза на база силата на отборите от soccerdata
+                h_team = row['team1']
+                a_team = row['team2']
+                # Използваме готовите xG (очаквани голове) от библиотеката
+                pred, prob = calculate_advanced_poisson(row['adj_score1'], row['adj_score2'])
+                
+                final_list.append({
+                    "league": row.get('league', 'INTERNATIONAL'),
+                    "match": f"{h_team} - {a_team}",
+                    "pred": pred,
+                    "prob": prob,
+                    "time": row['date'].strftime("%H:%M")
+                })
 
-# --- 5. ГЛАВЕН ЕКРАН (ВИЗУАЛИЗАЦИЯ) ---
-st.markdown('<h1 class="main-header">EQUILIBRIUM AI | ENGINE</h1>', unsafe_allow_html=True)
-st.write(f"<p style='text-align:center; color:#666;'>Последна синхронизация: {now_bg.strftime('%H:%M:%S')}</p>", unsafe_allow_html=True)
+        # --- 4. АВТОМАТИЧНО ПОДРЕЖДАНЕ ---
+        # Подреждаме всичко по процента на сигурност (prob)
+        final_list = sorted(final_list, key=lambda x: x['prob'], reverse=True)
 
-data = load_data()
-
-if not data:
-    st.info("Системата очаква входни данни от Nikol. Използвайте админ панела за качване на армадата.")
-else:
-    st.subheader("🔥 ТОП ПРОГНОЗИ ЗА ДНЕС (ПОДРЕДЕНИ ПО СИГУРНОСТ)")
-    for m in data:
-        st.markdown(f"""
-            <div class="match-card">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="flex:2;">
-                        <b style="font-size:1.3rem; color:#fff;">{m['match']}</b><br>
-                        <small style="color:#888;">ЧАС: {m['time']} | ДАТА: {m['date']}</small>
+        # ПОКАЗВАНЕ НА РЕЗУЛТАТИТЕ
+        st.subheader(f"✅ АНАЛИЗИРАНИ {len(final_list)} МАЧА (ПОДРЕДЕНИ ПО СИГУРНОСТ)")
+        
+        for m in final_list:
+            st.markdown(f"""
+                <div class="match-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="flex:2;">
+                            <span class="league-label">{m['league']}</span><br>
+                            <b style="font-size:1.1rem;">{m['match']}</b><br>
+                            <small style="color:#666;">ЧАС: {m['time']}</small>
+                        </div>
+                        <div style="flex:1; text-align:center;">
+                            <small style="color:#888;">AI ПРОГНОЗА</small><br>
+                            <b style="color:#00ff00;">{m['pred']}</b>
+                        </div>
+                        <div style="flex:1; text-align:right;">
+                            <span class="prob-display">{m['prob']}%</span>
+                        </div>
                     </div>
-                    <div style="flex:1; text-align:center; color:#ff4b4b; font-family:Orbitron; font-size:1.6rem;">{m['score']}</div>
-                    <div style="flex:1.5; text-align:center;">
-                        <span class="prob-badge">{m['pred']} ({m['prob']}%)</span>
-                    </div>
-                    <div style="flex:0.5; text-align:right; color:#00ff00; font-weight:bold; font-size:1.2rem;">@{m['odds']}</div>
                 </div>
-            </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
-    # ПУБЛИЧНА ТАБЛИЦА С ИСТОРИЯ
-    st.markdown("---")
-    st.subheader("📈 ПУБЛИЧНА ИСТОРИЯ НА УСПЕВАЕМОСТТА")
-    html_table = '<table class="table-style"><tr><th>ДАТА</th><th>МАЧ</th><th>ПРОГНОЗА</th><th>ВЕРОЯТНОСТ</th><th>СТАТУС</th></tr>'
-    for m in data:
-        html_table += f"<tr><td>{m['date']}</td><td>{m['match']}</td><td>{m['pred']}</td><td>{m['prob']}%</td><td style='color:#00ff00;'>АКТИВЕН ✅</td></tr>"
-    html_table += '</table>'
-    st.markdown(html_table, unsafe_allow_html=True)
+        # ПУБЛИЧНА ТАБЛИЦА С ИСТОРИЯ
+        st.markdown("---")
+        st.subheader("📊 ЦЯЛОСТНА ТАБЛИЦА НА АРМАДАТА")
+        st.table(pd.DataFrame(final_list))
 
-st.markdown("<p style='text-align:center; color:#222; margin-top:50px;'>© 2026 EQUILIBRIUM AI | DATA ANALYTICS SYSTEM</p>", unsafe_allow_html=True)
+else:
+    st.info("👈 Качи файл с мачове или натисни бутона, за да изтегля световната армада.")
+
+st.markdown("<p style='text-align:center; color:#222; margin-top:50px;'>© 2026 EQUILIBRIUM AI | GLOBAL DATA PROCESSING</p>", unsafe_allow_html=True)
