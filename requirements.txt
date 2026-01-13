@@ -12,4 +12,5 @@ feedparser
 google-api-python-client
 beautifulsoup4
 requests
-
+understat
+soccerdata
