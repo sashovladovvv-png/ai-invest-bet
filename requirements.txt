@@ -8,7 +8,8 @@ playwright
 facebook-sdk
 streamlit-autorefresh
 google-auth
-
+feedparser
 google-api-python-client
 beautifulsoup4
 requests
+
