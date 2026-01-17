@@ -12,7 +12,7 @@ RAPID_HOST = "free-api-live-football-data.p.rapidapi.com"
 
 # КЛЮЧ 2: iSports API (за мачове - от снимка c248d961)
 # ЗАМЕНИ "ТУК_СЛОЖИ_ISPORTS_KEY" С ТВОЯ КЛЮЧ ОТ ISPORTS
-ISPORTS_KEY = "ТУК_СЛОЖИ_ISPORTS_KEY" 
+ISPORTS_KEY = "aW8C1RFgu8rWZrs4" 
 
 # --- 2. ДИЗАЙН ---
 st.markdown("""
