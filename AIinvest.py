@@ -10,7 +10,7 @@ st.set_page_config(page_title="EQUILIBRIUM AI | ARMA DA PRO", page_icon="⚽", l
 # Ключове от твоите снимки
 RAPID_API_KEY = "71f5127309mshc41229a206cf2a7p18854cjsn2cf570c49495"
 RAPID_HOST = "free-api-live-football-data.p.rapidapi.com"
-ISPORTS_KEY = "71f5127309mshc41229a206cf2a7p18854cjsn2cf570c49495" 
+ISPORTS_KEY = "aW8C1RFgu8rWZrs4" 
 
 # --- 2. АЛГОРИТЪМ ЗА ПРОГНОЗИ (ФИКСИРАН ЗА СТАТУС -1) ---
 def calculate_ai_prediction(h_score, a_score, status):
@@ -97,4 +97,5 @@ if live_matches:
         
         st.markdown(f"""
             <div class="match-card">
+
 
