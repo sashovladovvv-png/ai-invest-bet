@@ -1,143 +1,61 @@
 import streamlit as st
-import requests
-import random
-import datetime
+import os
 
-# --- 1. КЛЮЧОВЕ И КОНФИГУРАЦИЯ ---
-# Използваме твоите ключове от снимките
-RAPID_API_KEY = "71f5127309mshc41229a206cf2a7p18854cjsn2cf570c49495"
-RAPID_HOST = "free-api-live-football-data.p.rapidapi.com"
-ISPORTS_KEY = "aW8C1RFgu8rWZrs4" 
+# --- 1. КОНФИГУРАЦИЯ ---
+st.set_page_config(page_title="EQUILIBRIUM AI | JOIN THE ARMADA", page_icon="📧", layout="centered")
 
-st.set_page_config(page_title="EQUILIBRIUM AI | ARMA DA V3", page_icon="⚽", layout="wide")
-
-# --- 2. ДИЗАЙН (DARK BULGARIA THEME) ---
+# Дизайн - Изчистен и професионален
 st.markdown("""
     <style>
     .stApp { background-color: #05080a; color: white; }
-    .match-card { 
-        background: #0d1117; border-radius: 12px; padding: 20px; 
-        margin-bottom: 10px; border-left: 6px solid #00ff00; border: 1px solid #1f242c; 
-    }
-    .pred-tag { 
-        background: #064e3b; color: #00ff00; padding: 8px 15px; 
-        border-radius: 8px; font-weight: bold; border: 1px solid #00ff00; text-align: center; 
-    }
-    .history-box {
-        background: #161b22; padding: 10px; border-radius: 8px; 
-        font-size: 0.85rem; border: 1px solid #30363d; margin-bottom: 5px;
-    }
-    .live-dot { color: #ff4b4b; font-weight: bold; animation: blinker 1.5s linear infinite; }
-    @keyframes blinker { 50% { opacity: 0; } }
+    .main-title { color: #00ff00; text-align: center; font-family: 'Orbitron', sans-serif; font-size: 2.5rem; margin-top: 50px; }
+    .sub-text { text-align: center; color: #888; margin-bottom: 30px; }
+    .email-box { background: #161b22; padding: 30px; border-radius: 15px; border: 1px solid #00ff00; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. АЛГОРИТЪМ ЗА ПРОГНОЗИ ---
-def get_ai_prediction(h, a):
-    try:
-        h, a = int(h), int(a)
-        if h > a: return "ПОБЕДА ДОМАКИН (1)", 88
-        elif a > h: return "ДВОЕН ШАНС: X2", 82
-        elif h == a:
-            if h == 0: return "ПОД 2.5 ГОЛА", 75
-            return "СЛЕДВАЩ ГОЛ: ДА", 82
-        return "НАД 1.5 ГОЛА", 70
-    except:
-        return "АНАЛИЗ НА ЖИВО", 65
+# --- 2. ГЛАВЕН ЕКРАН ---
+st.markdown('<h1 class="main-title">EQUILIBRIUM AI</h1>', unsafe_allow_html=True)
+st.markdown('<p class="sub-text">Стани част от Армадата. Получавай най-сигурните AI прогнози директно в пощата си.</p>', unsafe_allow_html=True)
 
-# --- 4. СТРАНИЧНО МЕНЮ (ГРАФА ИСТОРИЯ И ПОТРЕБИТЕЛИ) ---
-with st.sidebar:
-    st.markdown("## 📈 ИСТОРИЯ НА АНАЛИЗИТЕ")
+with st.container():
+    st.markdown('<div class="email-box">', unsafe_allow_html=True)
     
-    # Списък с история във формата, който поиска
-    history_list = [
-        {"m": "Левски vs ЦСКА", "res": "✅"},
-        {"m": "Лудогорец vs Ботев Пд", "res": "✅"},
-        {"m": "Реал Мадрид vs Барселона", "res": "❌"},
-        {"m": "Ман Сити vs Ливърпул", "res": "✅"},
-        {"m": "Арсенал vs Челси", "res": "✅"},
-        {"m": "Милан vs Интер", "res": "❌"}
-    ]
+    email = st.text_input("Въведи своя имейл адрес:", placeholder="example@mail.com")
+    submit_btn = st.button("ЗАПИШИ МЕ В АРМАДАТА")
     
-    for item in history_list:
-        st.markdown(f"<div class='history-box'>{item['m']} {item['res']}</div>", unsafe_allow_html=True)
-    
-    st.divider()
-    
-    st.markdown("### 👥 ПОТРЕБИТЕЛИ")
-    if st.button("ПРОВЕРИ ХОРА НА ЛИНИЯ"):
-        st.success(f"🟢 {random.randint(450, 920)} анализатори онлайн")
-    
-    st.divider()
-    st.caption("EQUILIBRIUM AI v3.0.1 - Българска версия")
-
-# --- 5. ГЛАВЕН ПАНЕЛ (МАЧОВЕ) ---
-st.title("⚽ EQUILIBRIUM AI | АКТИВНИ ПРОГНОЗИ")
-
-def get_live_data():
-    url = f"http://api.isportsapi.com/sport/football/livescores?api_key={ISPORTS_KEY}"
-    try:
-        r = requests.get(url, timeout=10)
-        return r.json().get('data', [])
-    except:
-        return []
-
-data = get_live_data()
-
-if data:
-    st.subheader(f"🎯 Намерени мачове за анализ: {len(data)}")
-    
-    for m in data[:30]:
-        h_name = m.get('homeName', 'Домакин')
-        a_name = m.get('awayName', 'Гост')
-        h_score = m.get('homeScore', 0)
-        a_score = m.get('awayScore', 0)
-        status = str(m.get('status', '0'))
-        league = m.get('leagueName', 'Лига')
-        
-        prediction, confidence = get_ai_prediction(h_score, a_score)
-        
-        # HTML Карта на мача
-        card_html = f"""
-        <div class="match-card">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="flex:2;">
-                    <small style="color:#888;">🏆 {league}</small><br>
-                    <b style="font-size:1.4rem;">{h_name} {h_score} - {a_score} {a_name}</b><br>
-                    <span class="live-dot">● НА ЖИВО (Минута: {status})</span>
-                </div>
-                <div style="flex:1;">
-                    <div class="pred-tag">
-                        <small style="display:block; font-size:0.6rem; color:#eee;">AI ПРОГНОЗА</small>
-                        {prediction}
-                    </div>
-                </div>
-                <div style="flex:1; text-align:right;">
-                    <span style="color:#00ff00; font-size:1.6rem; font-weight:bold;">{confidence}%</span><br>
-                    <small style="color:#666;">СИГУРНОСТ</small>
-                </div>
-            </div>
-        </div>
-        """
-        st.markdown(card_html, unsafe_allow_html=True)
-else:
-    st.warning("⚠️ В момента няма активни мачове. Скенерът работи...")
-
-# --- 6. ИНДИВИДУАЛЕН СКЕНЕР ЗА ИГРАЧИ ---
-st.divider()
-st.subheader("👤 СКЕНЕР ЗА ФОРМА НА ИГРАЧИ")
-p_name = st.text_input("Въведи име на играч (на латиница):", "")
-
-if p_name:
-    headers = {"X-RapidAPI-Key": RAPID_API_KEY, "X-RapidAPI-Host": RAPID_HOST}
-    try:
-        res = requests.get(f"https://{RAPID_HOST}/football-get-search-players", 
-                           headers=headers, params={"search_player": p_name}, timeout=10)
-        players = res.json().get('response', [])
-        if players:
-            for p in players:
-                st.info(f"📊 {p.get('name')} ({p.get('team')}) | AI Рейтинг: {p.get('rating')} | Голове: {p.get('goals')}")
+    if submit_btn:
+        if "@" in email and "." in email:
+            # ЗАПИСВАНЕ НА ИМЕЙЛА ВЪВ ФАЙЛ
+            with open("emails.txt", "a") as f:
+                f.write(f"{email}\n")
+            
+            st.success("✅ Твоят имейл е записан успешно! Очаквай първите анализи скоро.")
+            st.balloons()
         else:
-            st.error("Играчът не е намерен в базата данни.")
-    except:
-        st.error("Грешка при свързване със сървъра за играчи.")
+            st.error("❌ Моля, въведи валиден имейл адрес.")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# --- 3. АДМИН ПАНЕЛ (ВИДИМ САМО ЗА ТЕБ) ---
+# Можеш да добавиш парола, за да не ги виждат другите
+st.markdown("---")
+admin_key = st.text_input("Админ достъп (парола):", type="password")
+
+if admin_key == "armada2026": # Твоята парола
+    st.subheader("📊 Списък със записани имейли:")
+    if os.path.exists("emails.txt"):
+        with open("emails.txt", "r") as f:
+            emails = f.readlines()
+            if emails:
+                for idx, e in enumerate(emails):
+                    st.write(f"{idx+1}. {e.strip()}")
+                
+                # Бутон за изтегляне
+                st.download_button("ИЗТЕГЛИ СПИСЪКА", "".join(emails), file_name="subscribers.txt")
+            else:
+                st.info("Все още няма записани имейли.")
+    else:
+        st.info("Файлът с имейли още не е създаден.")
+
+st.markdown('<p style="text-align:center; color:#444; margin-top:100px;">Powered by Equilibrium AI Engine</p>', unsafe_allow_html=True)
